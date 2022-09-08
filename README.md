@@ -1,8 +1,8 @@
-# (TODO: your game's title)
+# Danmaku
 
-Author: (TODO: your name)
+Author: Jingguo Liang (jingguol@andrew.cmu.edu)
 
-Design: (TODO: In two sentences or fewer, describe what is new and interesting about your game.)
+Design: A bullet-hell (not quite because of sprite number limitation) game with ability to teleport yourself
 
 Screen Shot:
 
@@ -10,13 +10,17 @@ Screen Shot:
 
 How Your Asset Pipeline Works:
 
-(TODO: describe the steps in your asset pipeline, from source files to tiles/backgrounds/whatever you upload to the PPU466.)
+There are two asset files: one for the palettes and the other for the tiles. They are binary files that can be directly copied into vectors of uint8_t values.
 
-(TODO: make sure the source files you drew are included. You can [link](your/file.png) to them to be a bit fancier.)
+I tried to use the provided Loat<T> function but failed. So I just opened the files and manually copied the content out.
 
 How To Play:
 
-(TODO: describe the controls and (if needed) goals/strategy.)
+Use arrow keys to move. Hold Lshift and use arrow keys to move the teleport marker, then release Lshift to perform the teleport. Hit the enemy 100 times to win.
+
+The game does not yet have a winning/losing page. It will just quit on either situation.
+
+This game was built on Windows.
 
 This game was built with [NEST](NEST.md).
 

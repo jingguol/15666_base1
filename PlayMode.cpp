@@ -6,106 +6,73 @@
 //for glm::value_ptr() :
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Load.hpp"
+#include "data_path.hpp"
+
+#include <iostream>
+#include <fstream>
 #include <random>
+#include <ctime>
+#include <cstdlib>
 
 PlayMode::PlayMode() {
-	//TODO:
-	// you *must* use an asset pipeline of some sort to generate tiles.
-	// don't hardcode them like this!
-	// or, at least, if you do hardcode them like this,
-	//  make yourself a script that spits out the code that you paste in here
-	//   and check that script into your repository.
+	srand(static_cast<uint32_t>(time(NULL)));
 
-	//Also, *don't* use these tiles in your game:
+	/** Load assets.
+	 * This might not be the best place or the best way to do it,
+	 * but I failed to utilize the Load<T> function provided.
+	 * The compiler just won't stop complaining. */
+	std::ifstream ifs;
 
-	{ //use tiles 0-16 as some weird dot pattern thing:
-		std::array< uint8_t, 8*8 > distance;
-		for (uint32_t y = 0; y < 8; ++y) {
-			for (uint32_t x = 0; x < 8; ++x) {
-				float d = glm::length(glm::vec2((x + 0.5f) - 4.0f, (y + 0.5f) - 4.0f));
-				d /= glm::length(glm::vec2(4.0f, 4.0f));
-				distance[x+8*y] = uint8_t(std::max(0,std::min(255,int32_t( 255.0f * d ))));
-			}
-		}
-		for (uint32_t index = 0; index < 16; ++index) {
-			PPU466::Tile tile;
-			uint8_t t = uint8_t((255 * index) / 16);
-			for (uint32_t y = 0; y < 8; ++y) {
-				uint8_t bit0 = 0;
-				uint8_t bit1 = 0;
-				for (uint32_t x = 0; x < 8; ++x) {
-					uint8_t d = distance[x+8*y];
-					if (d > t) {
-						bit0 |= (1 << x);
-					} else {
-						bit1 |= (1 << x);
-					}
-				}
-				tile.bit0[y] = bit0;
-				tile.bit1[y] = bit1;
-			}
-			ppu.tile_table[index] = tile;
-		}
+	ifs.open(data_path("palette.dat"));
+	// Palette 0 is for player
+	ifs.read(reinterpret_cast<char*>(this->ppu.palette_table[0].data()), sizeof(uint8_t) * 16);
+	// Palette 1 is for enemy
+	ifs.read(reinterpret_cast<char*>(this->ppu.palette_table[1].data()), sizeof(uint8_t) * 16);
+	// Palette 2 is for background
+	ifs.read(reinterpret_cast<char*>(this->ppu.palette_table[2].data()), sizeof(uint8_t) * 16);
+	ifs.close();
+
+	ifs.open(data_path("tile.dat"));
+	// Tile 0 is player
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[0].bit0.data()), sizeof(uint8_t) * 8);
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[0].bit1.data()), sizeof(uint8_t) * 8);
+	// Tile 1 is player bullet
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[1].bit0.data()), sizeof(uint8_t) * 8);
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[1].bit1.data()), sizeof(uint8_t) * 8);
+	// Tile 2-5 are enemy
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[2].bit0.data()), sizeof(uint8_t) * 8);
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[2].bit1.data()), sizeof(uint8_t) * 8);
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[3].bit0.data()), sizeof(uint8_t) * 8);
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[3].bit1.data()), sizeof(uint8_t) * 8);
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[4].bit0.data()), sizeof(uint8_t) * 8);
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[4].bit1.data()), sizeof(uint8_t) * 8);
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[5].bit0.data()), sizeof(uint8_t) * 8);
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[5].bit1.data()), sizeof(uint8_t) * 8);
+	// Tile 6 is enemy bullet
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[6].bit0.data()), sizeof(uint8_t) * 8);
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[6].bit1.data()), sizeof(uint8_t) * 8);
+	ifs.close();
+	// Tile 7 is teleport marker
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[7].bit0.data()), sizeof(uint8_t) * 8);
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[7].bit1.data()), sizeof(uint8_t) * 8);
+	// Tile 8 is background
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[8].bit0.data()), sizeof(uint8_t) * 8);
+	ifs.read(reinterpret_cast<char*>(this->ppu.tile_table[8].bit1.data()), sizeof(uint8_t) * 8);
+
+
+	// Initialize background
+	for(auto it = this->ppu.background.begin(); it != this->ppu.background.end(); ++it) {
+		*it = (2 << 8) | 8;
 	}
 
-	//use sprite 32 as a "player":
-	ppu.tile_table[32].bit0 = {
-		0b01111110,
-		0b11111111,
-		0b11111111,
-		0b11111111,
-		0b11111111,
-		0b11111111,
-		0b11111111,
-		0b01111110,
-	};
-	ppu.tile_table[32].bit1 = {
-		0b00000000,
-		0b00000000,
-		0b00011000,
-		0b00100100,
-		0b00000000,
-		0b00100100,
-		0b00000000,
-		0b00000000,
-	};
-
-	//makes the outside of tiles 0-16 solid:
-	ppu.palette_table[0] = {
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-	};
-
-	//makes the center of tiles 0-16 solid:
-	ppu.palette_table[1] = {
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-	};
-
-	//used for the player:
-	ppu.palette_table[7] = {
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0xff, 0xff, 0x00, 0xff),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-	};
-
-	//used for the misc other sprites:
-	ppu.palette_table[6] = {
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0x88, 0x88, 0xff, 0xff),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-	};
-
+	// Sprite 0-5 are reserved for player, enemy, tele
+	for (uint32_t i = 6; i < 64; ++i) {
+		availableSprites.push_back(i);
+	}
 }
 
-PlayMode::~PlayMode() {
-}
+PlayMode::~PlayMode() { }
 
 bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
 
@@ -126,6 +93,10 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			down.downs += 1;
 			down.pressed = true;
 			return true;
+		} else if (evt.key.keysym.sym == SDLK_LSHIFT) {
+			lshift.downs += 1;
+			lshift.pressed = true;
+			return true;
 		}
 	} else if (evt.type == SDL_KEYUP) {
 		if (evt.key.keysym.sym == SDLK_LEFT) {
@@ -140,6 +111,9 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 		} else if (evt.key.keysym.sym == SDLK_DOWN) {
 			down.pressed = false;
 			return true;
+		} else if (evt.key.keysym.sym == SDLK_LSHIFT) {
+			lshift.pressed = false;
+			return true;
 		}
 	}
 
@@ -147,65 +121,182 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 }
 
 void PlayMode::update(float elapsed) {
+	
+	if (lshift.downs > 0) {
+		tele.pos = player.pos;
+		tele.active = true;
+	}
 
-	//slowly rotates through [0,1):
-	// (will be used to set background color)
-	background_fade += elapsed / 10.0f;
-	background_fade -= std::floor(background_fade);
+	if (tele.active && lshift.pressed) {
+		if (left.pressed) tele.pos.x -= tele.velocity * elapsed;
+		if (right.pressed) tele.pos.x += tele.velocity * elapsed;
+		if (down.pressed) tele.pos.y -= tele.velocity * elapsed;
+		if (up.pressed) tele.pos.y += tele.velocity * elapsed;
+		tele.pos.x = std::max(4.0f, tele.pos.x);
+		tele.pos.x = std::min(PPU466::ScreenWidth - 5.0f, tele.pos.x);
+		tele.pos.y = std::max(4.0f, tele.pos.y);
+		tele.pos.y = std::min(PPU466::ScreenHeight - 5.0f, tele.pos.y);
+	} else if (tele.active && !lshift.pressed) {
+		player.pos = tele.pos;
+		tele.active = false;
+	} else {
+		if (left.pressed) player.pos.x -= player.velocity * elapsed;
+		if (right.pressed) player.pos.x += player.velocity * elapsed;
+		if (down.pressed) player.pos.y -= player.velocity * elapsed;
+		if (up.pressed) player.pos.y += player.velocity * elapsed;
+		player.pos.x = std::max(4.0f, player.pos.x);
+		player.pos.x = std::min(PPU466::ScreenWidth - 5.0f, player.pos.x);
+		player.pos.y = std::max(3.0f, player.pos.y);
+		player.pos.y = std::min(PPU466::ScreenHeight - 6.0f, player.pos.y);
 
-	constexpr float PlayerSpeed = 30.0f;
-	if (left.pressed) player_at.x -= PlayerSpeed * elapsed;
-	if (right.pressed) player_at.x += PlayerSpeed * elapsed;
-	if (down.pressed) player_at.y -= PlayerSpeed * elapsed;
-	if (up.pressed) player_at.y += PlayerSpeed * elapsed;
+		player.timer += elapsed;
+		if (player.timer >= player.threshold) {
+			if (!availableSprites.empty()) {
+				int index = availableSprites.back();
+				availableSprites.pop_back();
+				bullets.push_back(Bullet(Bullet::Owner::player, player.pos, 
+					glm::vec2(0.0f, 120.0f), index));
+			}
+			player.timer -= player.threshold;	
+		}
+
+		enemy.timer1 += elapsed;
+		enemy.timer2 += elapsed;
+		if (enemy.timer1 >= enemy.threshold1) {
+			const int numBullets = 20;
+			for (int i = 0; i < numBullets; ++i) {
+				if (!availableSprites.empty()) {
+					int index = availableSprites.back();
+					availableSprites.pop_back();
+					float angle = (45.0f + 90.0f / numBullets * i) / 180.0f * 3.14159f;
+					bullets.push_back(Bullet(Bullet::Owner::enemy, enemy.pos,
+						glm::vec2(-100.0f * cosf(angle), -100.0f * sinf(angle)), index));
+				}
+			}
+			enemy.timer1 -= enemy.threshold1;
+		}
+		if (enemy.timer2 >= enemy.threshold2) {
+			if (!availableSprites.empty()) {
+				int index = availableSprites.back();
+				availableSprites.pop_back();
+				// float angle = (rand() % 181) / 180.0f * 3.14159f;
+				float angle = atan2f(enemy.pos.y - player.pos.y, enemy.pos.x - player.pos.x);
+				angle += (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.25f;
+				bullets.push_back(Bullet(Bullet::Owner::enemy, enemy.pos,
+						glm::vec2(-150.0f * cosf(angle), -150.0f * sinf(angle)), index));
+			}
+			enemy.timer2 = 0;
+			enemy.threshold2 = static_cast<float>(rand()) / RAND_MAX / 3.0f + 0.1f;
+		}
+
+		auto it = bullets.begin();
+		while (it != bullets.end()) {
+			it->pos += elapsed * it->velocity;
+			if (it->owner == Bullet::Owner::player) {
+				if (collideEnemy(*it)) {
+					enemy.hp--;
+					int index = it->spriteIndex;
+					availableSprites.push_back(index);
+					it = bullets.erase(it);
+					continue;
+				}
+			} else {
+				if (collidePlayer(*it)) {
+					set_current(nullptr);
+					int index = it->spriteIndex;
+					availableSprites.push_back(index);
+					it = bullets.erase(it);
+					continue;
+				}
+			}
+			if (it->pos.x < 0.0f || it->pos.x > PPU466::ScreenWidth ||
+				it->pos.y < 0.0f || it->pos.y > PPU466::ScreenHeight) {
+				int index = it->spriteIndex;
+				availableSprites.push_back(index);
+				it = bullets.erase(it);
+			} else {
+				++it;
+			}
+		}
+	}
+
+	if (enemy.hp <= 0) {
+		set_current(nullptr);
+	}
 
 	//reset button press counters:
 	left.downs = 0;
 	right.downs = 0;
 	up.downs = 0;
 	down.downs = 0;
+	lshift.downs = 0;
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	//--- set ppu state based on game state ---
 
-	//background color will be some hsv-like fade:
-	ppu.background_color = glm::u8vec4(
-		std::min(255,std::max(0,int32_t(255 * 0.5f * (0.5f + std::sin( 2.0f * M_PI * (background_fade + 0.0f / 3.0f) ) ) ))),
-		std::min(255,std::max(0,int32_t(255 * 0.5f * (0.5f + std::sin( 2.0f * M_PI * (background_fade + 1.0f / 3.0f) ) ) ))),
-		std::min(255,std::max(0,int32_t(255 * 0.5f * (0.5f + std::sin( 2.0f * M_PI * (background_fade + 2.0f / 3.0f) ) ) ))),
-		0xff
-	);
+	// Player sprite:
+	ppu.sprites[0].x = int8_t(player.pos.x - 3.0f);
+	ppu.sprites[0].y = int8_t(player.pos.y - 2.0f);
+	ppu.sprites[0].index = 0;
+	ppu.sprites[0].attributes = 0;
 
-	//tilemap gets recomputed every frame as some weird plasma thing:
-	//NOTE: don't do this in your game! actually make a map or something :-)
-	for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y) {
-		for (uint32_t x = 0; x < PPU466::BackgroundWidth; ++x) {
-			//TODO: make weird plasma thing
-			ppu.background[x+PPU466::BackgroundWidth*y] = ((x+y)%16);
+	// Enemy sprite
+	ppu.sprites[1].x = int8_t(enemy.pos.x + 1.0f);
+	ppu.sprites[1].y = int8_t(enemy.pos.y);
+	ppu.sprites[1].index = 2;
+	ppu.sprites[1].attributes = 1;
+	ppu.sprites[2].x = int8_t(enemy.pos.x - 7.0f);
+	ppu.sprites[2].y = int8_t(enemy.pos.y);
+	ppu.sprites[2].index = 3;
+	ppu.sprites[2].attributes = 1;
+	ppu.sprites[3].x = int8_t(enemy.pos.x + 1.0f);
+	ppu.sprites[3].y = int8_t(enemy.pos.y + 8.0f);
+	ppu.sprites[3].index = 4;
+	ppu.sprites[3].attributes = 1;
+	ppu.sprites[4].x = int8_t(enemy.pos.x - 7.0f);
+	ppu.sprites[4].y = int8_t(enemy.pos.y + 8.0f);
+	ppu.sprites[4].index = 5;
+	ppu.sprites[4].attributes = 1;
+
+	for (auto it = bullets.cbegin(); it != bullets.cend(); ++it) {
+		if (it->owner == Bullet::Owner::player) {
+			int index = it->spriteIndex;
+			ppu.sprites[index].x = int8_t(it->pos.x - 3.0f);
+			ppu.sprites[index].y = int8_t(it->pos.y - 3.0f);
+			ppu.sprites[index].index = 1;
+			ppu.sprites[index].attributes = 0;
+		} else {
+			int index = it->spriteIndex;
+			ppu.sprites[index].x = int8_t(it->pos.x - 3.0f);
+			ppu.sprites[index].y = int8_t(it->pos.y - 3.0f);
+			ppu.sprites[index].index = 6;
+			ppu.sprites[index].attributes = 1;
 		}
 	}
 
-	//background scroll:
-	ppu.background_position.x = int32_t(-0.5f * player_at.x);
-	ppu.background_position.y = int32_t(-0.5f * player_at.y);
-
-	//player sprite:
-	ppu.sprites[0].x = int8_t(player_at.x);
-	ppu.sprites[0].y = int8_t(player_at.y);
-	ppu.sprites[0].index = 32;
-	ppu.sprites[0].attributes = 7;
-
-	//some other misc sprites:
-	for (uint32_t i = 1; i < 63; ++i) {
-		float amt = (i + 2.0f * background_fade) / 62.0f;
-		ppu.sprites[i].x = int8_t(0.5f * PPU466::ScreenWidth + std::cos( 2.0f * M_PI * amt * 5.0f + 0.01f * player_at.x) * 0.4f * PPU466::ScreenWidth);
-		ppu.sprites[i].y = int8_t(0.5f * PPU466::ScreenHeight + std::sin( 2.0f * M_PI * amt * 3.0f + 0.01f * player_at.y) * 0.4f * PPU466::ScreenWidth);
-		ppu.sprites[i].index = 32;
-		ppu.sprites[i].attributes = 6;
-		if (i % 2) ppu.sprites[i].attributes |= 0x80; //'behind' bit
+	if (tele.active) {
+		ppu.sprites[5].x = int8_t(tele.pos.x - 3.0f);
+		ppu.sprites[5].y = int8_t(tele.pos.y - 3.0f);
+		ppu.sprites[5].index = 7;
+		ppu.sprites[5].attributes = 0;
+	} else {
+		ppu.sprites[5].x = 255;
+		ppu.sprites[5].y = 255;
+		ppu.sprites[5].index = 7;
+		ppu.sprites[5].attributes = 0;
 	}
 
 	//--- actually draw ---
 	ppu.draw(drawable_size);
+}
+
+bool PlayMode::collideEnemy(Bullet& b) const {
+	return (b.pos.x >= enemy.pos.x - 7.0f && b.pos.x <= enemy.pos.x + 7.0f &&
+		b.pos.y >= enemy.pos.y);
+}
+
+bool PlayMode::collidePlayer(Bullet& b) const {
+	return (b.pos.x >= player.pos.x - 2.0f && b.pos.x <= player.pos.x + 2.0f &&
+		b.pos.y >= player.pos.y - 2.0f && b.pos.y <= player.pos.y + 2.0f);
 }
